@@ -19,3 +19,9 @@ ADMIN_USER = 'pzingg@kentfieldschools.org'
 ALLOW_FROM = [
     '10.0.0.0/8'
 ]
+
+# Shared secret keys
+API_KEYS = [
+    'key1',
+    'key2'
+]

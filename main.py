@@ -1,6 +1,7 @@
 import httplib2
 import json
 import os
+import re
 
 from netaddr import IPNetwork, IPAddress
 
@@ -10,7 +11,7 @@ from oauth2client.client import SignedJwtAssertionCredentials
 from oauth2client.appengine import AppAssertionCredentials
 from google.appengine.api import memcache
 
-from config import ALLOW_FROM, INCLUDE_ORG_UNITS, EXCLUDE_ORG_UNITS, DOMAIN, ADMIN_USER
+from config import ALLOW_FROM, API_KEYS, INCLUDE_ORG_UNITS, EXCLUDE_ORG_UNITS, DOMAIN, ADMIN_USER
 
 import webapp2
 
@@ -57,17 +58,38 @@ def findActiveUsersInOrgUnits(service, limit):
                 break
     return usernames
 
+def checkIp(app, request):
+    request_ip = IPAddress(request.remote_addr)
+    allow_from = app.config.get('allow_from')
+    for cidr in allow_from:
+        if request_ip in cidr:
+            return True
+    return  False
+
+def checkApiKey(app, request):
+    api_key = None
+    auth_header = request.headers.get('authorization')
+    if auth_header:
+        print "AUTH %s" % auth_header
+        m = re.match(r'Bearer\s+(.+)\s*', auth_header)
+        if m:
+            api_key = m.group(1)
+    if not api_key:
+        api_key = request.get('apikey')
+    if api_key and api_key in app.config.get('api_keys'):
+        return True
+    return False
+
+
 class IndexPage(webapp2.RequestHandler):
     def get(self):
-        request_ip = IPAddress(self.request.remote_addr)
-        allow_from = self.app.config.get('allow_from')
-        request_allowed = False
-        for cidr in allow_from:
-            if request_ip in cidr:
-                request_allowed = True
-                break
+        request_allowed = checkIp(self.app, self.request)
         if not request_allowed:
             self.abort(403)
+            return
+        authorized = checkApiKey(self.app, self.request)
+        if not authorized:
+            self.abort(401)
             return
 
         limit = self.request.get('limit')
@@ -76,7 +98,7 @@ class IndexPage(webapp2.RequestHandler):
         service = self.app.config.get('directory_service')
         usernames = findActiveUsersInOrgUnits(service, limit)
         self.response.headers['Content-Type'] = 'text/plain'
-        self.response.write('\n'.join(usernames))
+        self.response.write('\n'.join(usernames) + '\n')
 
 # Google OAuth2 setup for service accounts, if we ever need to use it
 credentials = getServiceAccountCredentials(SCOPES)
@@ -90,7 +112,7 @@ allow_from = [ IPNetwork(x) for x in ALLOW_FROM ]
 if os.environ.get('SERVER_SOFTWARE', '').startswith('Development'):
     allow_from.append(IPNetwork('::1'))
 
-config = { 'directory_service': service, 'allow_from': allow_from }
+config = { 'directory_service': service, 'allow_from': allow_from, 'api_keys': API_KEYS }
 
 app = webapp2.WSGIApplication(routes=[
     ('/', IndexPage), ], 
