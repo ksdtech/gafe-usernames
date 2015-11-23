@@ -14,3 +14,8 @@ DOMAIN = 'myschool.org'
 
 # A user in your GAFE domain with admin rights
 ADMIN_USER = 'pzingg@kentfieldschools.org'
+
+# CIDR representations of your school's subnet(s)
+ALLOW_FROM = [
+    '10.0.0.0/8'
+]

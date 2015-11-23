@@ -2,13 +2,15 @@ import httplib2
 import json
 import os
 
+from netaddr import IPNetwork, IPAddress
+
 from apiclient import discovery
 import oauth2client
 from oauth2client.client import SignedJwtAssertionCredentials
 from oauth2client.appengine import AppAssertionCredentials
 from google.appengine.api import memcache
 
-from config import INCLUDE_ORG_UNITS, EXCLUDE_ORG_UNITS, DOMAIN, ADMIN_USER
+from config import ALLOW_FROM, INCLUDE_ORG_UNITS, EXCLUDE_ORG_UNITS, DOMAIN, ADMIN_USER
 
 import webapp2
 
@@ -57,6 +59,17 @@ def findActiveUsersInOrgUnits(service, limit):
 
 class IndexPage(webapp2.RequestHandler):
     def get(self):
+        request_ip = IPAddress(self.request.remote_addr)
+        allow_from = self.app.config.get('allow_from')
+        request_allowed = False
+        for cidr in allow_from:
+            if request_ip in cidr:
+                request_allowed = True
+                break
+        if not request_allowed:
+            self.abort(403)
+            return
+
         limit = self.request.get('limit')
         if limit:
             limit = int(limit)
@@ -71,7 +84,13 @@ credentials = getServiceAccountCredentials(SCOPES)
 http = httplib2.Http(cache=memcache)
 auth_http = credentials.authorize(http)
 service = discovery.build('admin', 'directory_v1', http=auth_http)
-config = { 'directory_service': service }
+
+# Add localhost if we are testing
+allow_from = [ IPNetwork(x) for x in ALLOW_FROM ]
+if os.environ.get('SERVER_SOFTWARE', '').startswith('Development'):
+    allow_from.append(IPNetwork('::1'))
+
+config = { 'directory_service': service, 'allow_from': allow_from }
 
 app = webapp2.WSGIApplication(routes=[
     ('/', IndexPage), ], 
