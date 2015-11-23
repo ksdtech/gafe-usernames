@@ -15,13 +15,19 @@ from config import ALLOW_FROM, API_KEYS, INCLUDE_ORG_UNITS, EXCLUDE_ORG_UNITS, D
 
 import webapp2
 
+# AppAssertionCredentials does not work for admin SDK, because
+# you need a JWT "sub" user to actually perform the requests.
+# Also AppAssertionCredentials will not work with the dev server.
+
 SCOPES = [
     'https://www.googleapis.com/auth/admin.directory.orgunit',
     'https://www.googleapis.com/auth/admin.directory.user'
 ]
 
+NEED_SUB_USER = True
+
 def getServiceAccountCredentials(scopes):
-    if os.environ.get('SERVER_SOFTWARE', '').startswith('Development'):
+    if NEED_SUB_USER or os.environ.get('SERVER_SOFTWARE', '').startswith('Development'):
         secrets = json.load(open('service_account_secrets.json'))
         credentials = SignedJwtAssertionCredentials(secrets['client_email'], 
             secrets['private_key'], scope=scopes, sub=ADMIN_USER)

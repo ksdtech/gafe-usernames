@@ -45,13 +45,9 @@ for options when running dev_appserver.
 ## Deployment
 To deploy the application on appspot.com:
 
-1. In the [Google Developers Console](https://console.developers.google.com) console, add
-    the appspot.com URIs for the "Authorized Javascript origins" and "Authorized redirect URIs". 
-
-
-3. [Deploy the application](https://developers.google.com/appengine/docs/python/tools/uploadinganapp) with:
+1. [Deploy the application](https://developers.google.com/appengine/docs/python/tools/uploadinganapp) with:
     ```
-    appcfg.py -A gafe-conferences --oauth2 update .
+    appcfg.py -A gafe-usernames --oauth2 update .
     ```
 
 Congratulations! Your application is now live at gafe-conferences.appspot.com
