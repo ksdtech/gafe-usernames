@@ -1,0 +1,2 @@
+oauth2client==1.4.2
+git+git://github.com/google/google-api-python-client@master

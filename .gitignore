@@ -1,0 +1,5 @@
+.DS_Store
+*.pyc
+service_account_secrets.json
+config.py
+lib/*
